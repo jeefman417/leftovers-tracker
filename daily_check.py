@@ -41,7 +41,7 @@ def get_fridge_summary():
 topic = "my-fridge-alerts-2026" 
 summary = get_fridge_summary()
 
-requests.post(f"https://ntfy.sh{topic}",
+requests.post(f"https://ntfy.sh/{topic}",
     data=summary.encode('utf-8'),
     headers={
         "Title": "Fridge Alert",
