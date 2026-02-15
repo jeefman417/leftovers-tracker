@@ -3,63 +3,45 @@ import requests
 import notion_client
 
 # 1. Setup Notion
-# Using 'my_fridge_connection' so there is ZERO chance of a name clash
+# Using 'notion_bot' to avoid the DatabasesEndpoint error
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
-
-# Initialize the client from the library
-my_fridge_connection = notion_client.Client(auth=NOTION_TOKEN)
+notion_bot = notion_client.Client(auth=NOTION_TOKEN)
 
 def get_fridge_summary():
     try:
-        # Use our unique variable name here
-        response = my_fridge_connection.databases.query(
+        response = notion_bot.databases.query(
             database_id=DATABASE_ID,
             filter={"property": "Archived", "checkbox": {"equals": False}}
         )
         results = response.get("results", [])
         
         if not results:
-            return "Your fridge is currently empty! No leftovers to track."
+            return "Fridge is empty! No leftovers to track."
         
-        msg = "🍱 Morning Fridge Update:\n"
+        msg = "Morning Fridge Update:\n"
         for page in results:
             p = page.get("properties", {})
-            
-            # Extract Food Name (Handling the Notion list structure)
+            # Extract Food Name
             title_list = p.get("Food", {}).get("title", [])
-            food = title_list[0].get("text", {}).get("content", "Unknown") if title_list else "Unknown Food"
-            
-            # Extract Days Left (From your Notion formula)
+            food = title_list[0].get("text", {}).get("content", "Unknown") if title_list else "Unknown"
+            # Extract Days Left
             days = p.get("Days Left", {}).get("formula", {}).get("string", "N/A")
-            
             msg += f"- {food}: {days}\n"
         return msg
     except Exception as e:
-        # If it fails, this will send the exact error text to your phone
-        return f"Error checking Notion: {str(e)}"
+        return f"Notion Error: {str(e)}"
 
-# 2. Generate the message
+# 2. Get Data
 summary = get_fridge_summary()
+print(f"Robot output: {summary}")
 
-# 3. Print to GitHub Logs (for debugging)
-print("--- ROBOT OUTPUT ---")
-print(summary)
-
-# 4. Send to Phone via ntfy.sh
-# SLASH IS DEFINITELY INCLUDED HERE /
-topic = "my-fridge-alerts-2026" 
-final_url = "https://ntfy.sh" + topic
-
-try:
-    requests.post(
-        final_url,
-        data=summary.encode('utf-8'),
-        headers={
-            "Title": "Fridge Alert",
-            "Priority": "high"
-        }
-    )
-    print("--- NOTIFICATION SENT ---")
-except Exception as e:
-    print(f"--- FAILED TO SEND NOTIFICATION: {e} ---")
+# 3. Send to Phone (HARD-CODED URL WITH SLASH)
+requests.post(
+    "https://ntfy.sh",
+    data=summary.encode('utf-8'),
+    headers={
+        "Title": "Fridge Alert",
+        "Priority": "high"
+    }
+)
