@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install notion-client
+          pip install notion-client requests
 
       - name: Run daily check
         env:
