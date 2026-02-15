@@ -38,8 +38,7 @@ summary = get_fridge_summary()
 requests.post(f"https://ntfy.sh/{topic}",
     data=summary.encode('utf-8'),
     headers={
-        "Title": "Fridge Alert 🧊",
+        "Title": "Fridge Alert",
         "Priority": "high",
-        "Tags": "plate_with_cutlery"
     }
 )
