@@ -1,15 +1,18 @@
 import os
 import requests
-import notion_client
+from notion_client import Client
 
 # 1. Setup
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
-my_notion = notion_client.Client(auth=NOTION_TOKEN)
+
+# We name this 'fridge_bot' so it doesn't clash with the library name
+fridge_bot = Client(auth=NOTION_TOKEN)
 
 def get_fridge_summary():
     try:
-        response = my_notion.databases.query(
+        # Use the specific 'fridge_bot' connection
+        response = fridge_bot.databases.query(
             database_id=DATABASE_ID,
             filter={"property": "Archived", "checkbox": {"equals": False}}
         )
@@ -21,10 +24,14 @@ def get_fridge_summary():
         msg = "Fridge Update:\n"
         for page in results:
             p = page.get("properties", {})
-            title_content = p.get("Food", {}).get("title", [])
-            # Safe text extraction
-            food = title_content[0].get("text", {}).get("content", "Unknown") if title_content else "Unknown"
+            
+            # Notion Title extraction
+            title_list = p.get("Food", {}).get("title", [])
+            food = title_list[0].get("text", {}).get("content", "Unknown") if title_list else "Unknown"
+            
+            # Notion Formula extraction
             days = p.get("Days Left", {}).get("formula", {}).get("string", "N/A")
+            
             msg += f"- {food}: {days}\n"
         return msg
     except Exception as e:
@@ -34,7 +41,8 @@ def get_fridge_summary():
 summary = get_fridge_summary()
 print(f"Robot output: {summary}")
 
-# 3. Send (Clean URL, Clean Headers, Clean Body)
+# 3. Send to Phone (SLASH INCLUDED)
+# Verify ntfy app is subscribed to: my-fridge-alerts-2026
 requests.post(
     "https://ntfy.sh",
     data=summary,
