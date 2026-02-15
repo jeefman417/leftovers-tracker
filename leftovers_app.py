@@ -131,18 +131,22 @@ else:
                 st.write(f"**Status:** {status} ({days_left})")
                 st.write(f"💰 **Value:** ${cost:.2f}")
             with c3:
-                st.write("⚖️ **The Verdict?**")
-                # Restoring the actual buttons with correct indentation
+                st.write("⚖️ **Verdict?**")
+                
+                # Button for Eaten
                 if st.button("🍴 Eaten", key=f"eat_{item_id}"):
                     notion.pages.update(page_id=item_id, properties={
-                        "The Verdict": {"select": {"name": "🍴 Eaten"}},
+                        "Verdict": {"select": {"name": "Eaten"}}, 
                         "Archived": {"checkbox": True}
                     })
                     st.rerun()
+                
+                # Button for Tossed
                 if st.button("🗑️ Tossed", key=f"toss_{item_id}"):
                     notion.pages.update(page_id=item_id, properties={
-                        "The Verdict": {"select": {"name": "🗑️ Tossed"}},
+                        "Verdict": {"select": {"name": "Tossed"}}, 
                         "Archived": {"checkbox": True}
                     })
                     st.rerun()
+          
         st.divider()
