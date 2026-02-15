@@ -69,56 +69,56 @@ import requests
 def get_leftovers():
     """Get all leftovers from Notion"""
     try:
-        # Use direct API call instead of notion-client
-        headers = {
-            "Authorization": f"Bearer {NOTION_TOKEN}",
-            "Notion-Version": "2022-06-28",
-            "Content-Type": "application/json"
-        }
+        # Use the correct method for current notion-client version
+        response = notion.databases.query(
+            **{"database_id": DATABASE_ID}
+        )
         
-        # Query the database directly
-        url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
-        response = requests.post(url, headers=headers)
+        leftovers = []
+        for item in response['results']:
+            props = item.get('properties', {})
+            
+            # Safe property access with defaults
+            food_title = props.get('Food', {}).get('title', [])
+            food = food_title[0].get('text', {}).get('content', 'Unknown') if food_title else 'Unknown'
+            
+            expires_date = props.get('Expires', {}).get('date', {})
+            expires = expires_date.get('start') if expires_date else None
+            
+            days_left = props.get('Days Left', {}).get('number', 0)
+            
+            location_text = props.get('Location', {}).get('rich_text', [])
+            location = location_text[0].get('text', {}).get('content', 'Unknown') if location_text else 'Unknown'
+            
+            added_by_select = props.get('Added By', {}).get('select', {})
+            added_by = added_by_select.get('name', 'Unknown') if added_by_select else 'Unknown'
+            
+            notes_text = props.get('Notes', {}).get('rich_text', [])
+            notes = notes_text[0].get('text', {}).get('content', '') if notes_text else ''
+            
+            # Get photo URL if available
+            photo_url = None
+            if 'Photo' in props and props['Photo'].get('files'):
+                photo_files = props['Photo'].get('files', [])
+                if photo_files:
+                    photo_url = photo_files[0].get('file', {}).get('url')
+            
+            if expires:
+                leftovers.append({
+                    'food': food,
+                    'expires': expires,
+                    'days_left': days_left,
+                    'location': location,
+                    'added_by': added_by,
+                    'notes': notes,
+                    'photo_url': photo_url
+                })
         
-        if response.status_code == 200:
-            data = response.json()
-            leftovers = []
-            
-            for item in data.get('results', []):
-                props = item.get('properties', {})
-                food = props.get('Food', {}).get('title', [{}])[0].get('text', {}).get('content', 'Unknown')
-                expires = props.get('Expires', {}).get('date', {}).get('start')
-                days_left = props.get('Days Left', {}).get('number', 0)
-                location = props.get('Location', {}).get('rich_text', [{}])[0].get('text', {}).get('content', 'Unknown')
-                added_by = props.get('Added By', {}).get('select', {}).get('name', 'Unknown')
-                notes = props.get('Notes', {}).get('rich_text', [{}])[0].get('text', {}).get('content', '')
-                
-                # Get photo URL if available
-                photo_url = None
-                if 'Photo' in props and props['Photo'].get('files'):
-                    photo_url = props['Photo']['files'][0]['file']['url']
-                
-                if expires:
-                    leftovers.append({
-                        'food': food,
-                        'expires': expires,
-                        'days_left': days_left,
-                        'location': location,
-                        'added_by': added_by,
-                        'notes': notes,
-                        'photo_url': photo_url
-                    })
-            
-            return leftovers
-        else:
-            st.error(f"API Error: {response.status_code} - {response.text}")
-            return []
+        return leftovers
         
     except Exception as e:
         st.error(f"Error fetching leftovers: {str(e)}")
         return []
-
-
 
 # Main App UI
 st.title("🍱 Leftovers Tracker")
