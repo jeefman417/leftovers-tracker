@@ -64,45 +64,60 @@ def add_leftover(food_name, expires_days, location, added_by, notes="", photo_fi
     except Exception as e:
         return False, f"Error: {str(e)}"
 
+import requests
+
 def get_leftovers():
     """Get all leftovers from Notion"""
     try:
-        # Use the correct API method for current notion-client version
-        # Access the databases endpoint directly
-        databases_endpoint = notion.databases
-        response = databases_endpoint.query(database_id=DATABASE_ID)
+        # Use direct API call instead of notion-client
+        headers = {
+            "Authorization": f"Bearer {NOTION_TOKEN}",
+            "Notion-Version": "2022-06-28",
+            "Content-Type": "application/json"
+        }
         
-        leftovers = []
-        for item in response['results']:
-            props = item['properties']
-            food = props['Food']['title'][0]['text']['content'] if props['Food']['title'] and props['Food']['title'] else 'Unknown'
-            expires = props['Expires']['date']['start'] if props['Expires']['date'] else None
-            days_left = props['Days Left']['number'] if props['Days Left']['number'] else 0
-            location = props['Location']['rich_text'][0]['text']['content'] if props['Location']['rich_text'] else 'Unknown'
-            added_by = props['Added By']['select']['name'] if props['Added By']['select'] else 'Unknown'
-            notes = props['Notes']['rich_text'][0]['text']['content'] if props['Notes']['rich_text'] else ''
-            
-            # Get photo URL if available
-            photo_url = None
-            if 'Photo' in props and props['Photo']['files']:
-                photo_url = props['Photo']['files'][0]['file']['url']
-            
-            if expires:
-                leftovers.append({
-                    'food': food,
-                    'expires': expires,
-                    'days_left': days_left,
-                    'location': location,
-                    'added_by': added_by,
-                    'notes': notes,
-                    'photo_url': photo_url
-                })
+        # Query the database directly
+        url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
+        response = requests.post(url, headers=headers)
         
-        return leftovers
+        if response.status_code == 200:
+            data = response.json()
+            leftovers = []
+            
+            for item in data.get('results', []):
+                props = item.get('properties', {})
+                food = props.get('Food', {}).get('title', [{}])[0].get('text', {}).get('content', 'Unknown')
+                expires = props.get('Expires', {}).get('date', {}).get('start')
+                days_left = props.get('Days Left', {}).get('number', 0)
+                location = props.get('Location', {}).get('rich_text', [{}])[0].get('text', {}).get('content', 'Unknown')
+                added_by = props.get('Added By', {}).get('select', {}).get('name', 'Unknown')
+                notes = props.get('Notes', {}).get('rich_text', [{}])[0].get('text', {}).get('content', '')
+                
+                # Get photo URL if available
+                photo_url = None
+                if 'Photo' in props and props['Photo'].get('files'):
+                    photo_url = props['Photo']['files'][0]['file']['url']
+                
+                if expires:
+                    leftovers.append({
+                        'food': food,
+                        'expires': expires,
+                        'days_left': days_left,
+                        'location': location,
+                        'added_by': added_by,
+                        'notes': notes,
+                        'photo_url': photo_url
+                    })
+            
+            return leftovers
+        else:
+            st.error(f"API Error: {response.status_code} - {response.text}")
+            return []
         
     except Exception as e:
         st.error(f"Error fetching leftovers: {str(e)}")
         return []
+
 
 
 # Main App UI
