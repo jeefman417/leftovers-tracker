@@ -1,1 +1,30 @@
+name: Daily Fridge Update
+
+on:
+  schedule:
+    # This runs at 08:00 UTC every day (approx. 3 AM EST / 12 AM PST)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allows you to run it manually for testing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python_version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install notion-client
+
+      - name: Run daily check
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: python daily_check.py
 
