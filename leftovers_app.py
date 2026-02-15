@@ -67,10 +67,10 @@ def add_leftover(food_name, expires_days, location, added_by, notes="", photo_fi
 def get_leftovers():
     """Get all leftovers from Notion"""
     try:
-        # Use the correct method for current notion-client version
-        response = notion.databases.query(
-            **{"database_id": DATABASE_ID}
-        )
+        # Use the correct API method for current notion-client version
+        # Access the databases endpoint directly
+        databases_endpoint = notion.databases
+        response = databases_endpoint.query(database_id=DATABASE_ID)
         
         leftovers = []
         for item in response['results']:
@@ -103,6 +103,7 @@ def get_leftovers():
     except Exception as e:
         st.error(f"Error fetching leftovers: {str(e)}")
         return []
+
 
 # Main App UI
 st.title("🍱 Leftovers Tracker")
