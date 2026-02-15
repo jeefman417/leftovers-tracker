@@ -43,18 +43,21 @@ def add_leftover(food_name, expires_days, location, added_by, notes="", photo_fi
         
         # Add photo if provided
         if photo_file is not None:
-            # Upload photo to Notion
-            with photo_file as file:
-                file_content = file.read()
-            
-            # Create file in Notion
-            notion_file = notion.files.upload({
-                "purpose": "inline",
-                "file": file_content
-            })
-            
-            # Add photo to properties
-            properties["Photo"] = {"files": [{"name": photo_file.name, "type": "file", "file": {"url": notion_file["url"]}}]}
+            try:
+                # Upload photo to Notion
+                with photo_file as file:
+                    file_content = file.read()
+                
+                # Create file in Notion
+                notion_file = notion.files.upload({
+                    "purpose": "inline",
+                    "file": file_content
+                })
+                
+                # Add photo to properties
+                properties["Photo"] = {"files": [{"name": photo_file.name, "type": "file", "file": {"url": notion_file["url"]}}]}
+            except Exception as photo_error:
+                st.warning(f"Photo upload failed: {photo_error}")
         
         notion.pages.create(
             parent={"database_id": DATABASE_ID},
@@ -63,8 +66,6 @@ def add_leftover(food_name, expires_days, location, added_by, notes="", photo_fi
         return True, "Leftover added successfully!"
     except Exception as e:
         return False, f"Error: {str(e)}"
-
-import requests
 
 def get_leftovers():
     """Get all leftovers from Notion"""
@@ -89,7 +90,6 @@ def get_leftovers():
             
             location_text = props.get('Location', {}).get('rich_text', [])
             location = location_text[0].get('text', {}).get('content', 'Unknown') if location_text else 'Unknown'
-            
             added_by_select = props.get('Added By', {}).get('select', {})
             added_by = added_by_select.get('name', 'Unknown') if added_by_select else 'Unknown'
             
@@ -153,33 +153,49 @@ with st.form("add_leftover"):
         else:
             st.error(f"❌ {message}")
 
-# Current Leftovers Display
+# Current Leftovers Display - ROBUST VERSION
 st.header("Current Leftovers")
 leftovers = get_leftovers()
 
 if leftovers:
     for item in leftovers:
-        days_left = item['days_left']
-        if days_left <= 1:
-            status_text = f"⚠️ Expires in {days_left} day!"
-            color = "red"
-        elif days_left <= 3:
-            status_text = f"⚠️ Expires in {days_left} days!"
-            color = "orange"
-        else:
-            status_text = f"✅ Expires in {days_left} days"
-            color = "green"
-        
-        # Display photo if available
-        if item['photo_url']:
-            st.image(item['photo_url'], width=150, caption=item['food'])
-        
-        st.markdown(f"""
-        <div style="color: {color}; font-weight: bold; padding: 10px; border-radius: 5px; margin: 10px 0;">
-        🍕 **{item['food']}** | 📍 {item['location']} | 👤 {item['added_by']}  
-        {status_text} | 📅 {item['expires'][:10]} | 📝 {item['notes']}
-        </div>
-        """, unsafe_allow_html=True)
+        try:
+            days_left = item.get('days_left', 0)
+            if days_left <= 1:
+                status_text = f"⚠️ Expires in {days_left} day!"
+                color = "red"
+            elif days_left <= 3:
+                status_text = f"⚠️ Expires in {days_left} days!"
+                color = "orange"
+            else:
+                status_text = f"✅ Expires in {days_left} days"
+                color = "green"
+            
+            # Display photo if available
+            if item.get('photo_url'):
+                try:
+                    st.image(item['photo_url'], width=150, caption=item.get('food', 'Unknown'))
+                except:
+                    st.write("⚠️ Could not display photo")
+            
+            # Display item info with safe defaults
+            food = item.get('food', 'Unknown')
+            location = item.get('location', 'Unknown')
+            added_by = item.get('added_by', 'Unknown')
+            expires = item.get('expires', 'Unknown')
+            notes = item.get('notes', '')
+            
+            st.markdown(f"""
+            <div style="color: {color}; font-weight: bold; padding: 10px; border-radius: 5px; margin: 10px 0;">
+            🍕 **{food}** | 📍 {location} | 👤 {added_by}  
+            {status_text} | 📅 {expires[:10] if expires else 'Unknown'} | 📝 {notes}
+            </div>
+            """, unsafe_allow_html=True)
+            
+        except Exception as display_error:
+            st.warning(f"Error displaying item: {display_error}")
+# Display a fallback version
+            st.write(f"🍕 **Item**: {item.get('food', 'Unknown')} | 📅 {item.get('expires', 'Unknown')}")
 else:
     st.info("🎯 Add your first leftover above to get started!")
 
@@ -192,7 +208,7 @@ with col1:
     st.metric("Total Items", total_items)
 
 with col2:
-    expiring_count = len([item for item in leftovers if item['days_left'] <= 2])
+    expiring_count = len([item for item in leftovers if item.get('days_left', 0) <= 2])
     st.metric("Expiring Soon", expiring_count)
 
 with col3:
