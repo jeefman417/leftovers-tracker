@@ -64,7 +64,7 @@ with st.form("add_form", clear_on_submit=True):
     with col1:
         food_name = st.text_input("What food is it?")
         location = st.selectbox("Location", ["Top shelf", "Middle shelf", "Bottom shelf", "Crisper drawer", "Door"])
-        photo_file = st.camera_input("Take a photo")
+        photo_file = st.file_uploader("Add a photo", type=["jpg", "jpeg", "png"])
         
     with col2:
         added_by = st.selectbox("Who added it?", ["You", "Wife"])
