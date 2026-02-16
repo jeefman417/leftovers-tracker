@@ -22,7 +22,7 @@ def get_fridge_report():
 
     try:
         # Direct API Call
-        url = f"https://api.notion.com{DATABASE_ID}/query"
+        url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
         results = response.json().get("results", [])
@@ -51,7 +51,7 @@ report_text = get_fridge_report()
 print(f"DEBUG REPORT: {report_text}")
 
 # 4. Send via Pushover
-requests.post("https://api.pushover.net", data={
+requests.post("https://api.pushover.net/1/messages.json", data={
     "token": PO_TOKEN,
     "user": PO_USER,
     "message": report_text,
