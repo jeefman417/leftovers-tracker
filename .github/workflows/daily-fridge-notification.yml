@@ -5,7 +5,7 @@ on:
     # Runs every day at 8:00 AM UTC (adjust timezone as needed)
     # Format: minute hour day month day-of-week
     # This is 8:00 AM UTC - adjust for your timezone
-    - cron: '0 8 * * *'
+    - cron: '0 14 * * *'
   
   # Allows you to manually trigger the workflow from GitHub Actions tab
   workflow_dispatch:
