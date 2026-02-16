@@ -8,13 +8,16 @@ db_id = os.getenv("NOTION_DATABASE_ID")
 po_user = os.getenv("PUSHOVER_USER_KEY")
 po_token = os.getenv("PUSHOVER_API_TOKEN")
 
-# Initialize specifically
 client = Client(auth=token)
 
-# 2. Query (Directly, no 'try' block so we can see the real error)
-response = client.databases.query(
-    database_id=db_id,
-    filter={"property": "Archived", "checkbox": {"equals": False}}
+# 2. Raw Request (Bypassing the 'databases' attribute entirely)
+# This hits the endpoint directly to avoid the 'DatabasesEndpoint' error
+response = client.request(
+    path=f"databases/{db_id}/query",
+    method="POST",
+    body={
+        "filter": {"property": "Archived", "checkbox": {"equals": False}}
+    }
 )
 results = response.get("results", [])
 
@@ -25,9 +28,12 @@ else:
     msg = "🍱 Fridge Update:\n"
     for page in results:
         p = page["properties"]
-        # Using a more robust way to get the text
-        food = p["Food"]["title"][0]["text"]["content"] if p["Food"]["title"] else "Unknown"
-        days = p["Days Left"]["formula"]["string"] if "formula" in p["Days Left"] else "N/A"
+        # Safe extraction for Notion's list-based title structure
+        food_list = p.get("Food", {}).get("title", [])
+        food = food_list[0]["text"]["content"] if food_list else "Unknown"
+        
+        # Safe extraction for formula string
+        days = p.get("Days Left", {}).get("formula", {}).get("string", "N/A")
         msg += f"- {food}: {days}\n"
 
 print(f"Final Message: {msg}")
